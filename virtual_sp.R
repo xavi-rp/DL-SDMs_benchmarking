@@ -148,46 +148,48 @@ for(i in 1:repetitions){
   virtSpi_occ <- as.data.frame(coordinates(virtSpi$pa.raster))
   virtSpi_occ$spec <- values(virtSpi$pa.raster)
   
-  virtSpi_occ <- virtSpi_occ[virtSpi_occ$spec == TRUE, ]
+  virtSpi_occ <- virtSpi_occ[virtSpi_occ$spec == 1, ]
   virtSpi_occ <- virtSpi_occ[!is.na(virtSpi_occ$spec), ]
   virtSpi_occ$spec <- paste0("virtSp_", i)
   names(virtSpi_occ) <- c("lon", "lat", "species")
+  
+  virtSpi_occ <- sample_n(virtSpi_occ, n2sample)
   #head(virtSpi_occ)
   #nrow(virtSpi_occ)
   virtSp_occurrences <- rbind(virtSp_occurrences, virtSpi_occ)
-  
-
 }
 
+head(virtSp_occurrences)
+nrow(virtSp_occurrences)
+table(virtSp_occurrences$species)
 
 
-presence.points <- sampleOccurrences(virtSps[[i]],
-                                     n = n2sample, # The number of points to sample
-                                     type = "presence only")
-
-head(presence.points)
-presence.points$sample.points
-
-
-PA.points <- sampleOccurrences(virtSps[[1]],
-                               #n = 3000,
-                               #sample.prevalence = 0.01,
-                               n = 30,
-                               sample.prevalence = 0.5,
-                               type = "presence-absence",
-                               extract.probability = TRUE, # You may be interested in extracting the true probability of occurrence at each sampled point, to compare with your SDM results
-                               plot = TRUE)
-PA.points
-PA.points$sample.points
-sum(PA.points$sample.points$Real == 1)
-sum(PA.points$sample.points$Real == 0)
+#presence.points <- sampleOccurrences(virtSps[[i]],
+#                                     n = n2sample, # The number of points to sample
+#                                     type = "presence only")
+#head(presence.points)
+#presence.points$sample.points
+#
+#
+#PA.points <- sampleOccurrences(virtSps[[1]],
+#                               #n = 3000,
+#                               #sample.prevalence = 0.01,
+#                               n = 30,
+#                               sample.prevalence = 0.5,
+#                               type = "presence-absence",
+#                               extract.probability = TRUE, # You may be interested in extracting the true probability of occurrence at each sampled point, to compare with your SDM results
+#                               plot = TRUE)
+#PA.points
+#PA.points$sample.points
+#sum(PA.points$sample.points$Real == 1)
+#sum(PA.points$sample.points$Real == 0)
 
 
 
 
 #
-write.csv(virtSp_occurrences, paste0(dir2save, "/virtSp_occurrences.csv"), row.names = FALSE)
-save(virtSps, file = paste0(dir2save, "/virtSp_allRasters.RData"))
+write.csv(virtSp_occurrences, "virtSp_occurrences.csv", row.names = FALSE)
+save(virtSps, file = "virtSp_allinfo.RData")
 
 
 
