@@ -145,10 +145,9 @@ taxons <- spcies$taxons
 
 
 
-## Modelling ####
+## Modelling with MaxEnt ####
 
 info_models <- c()
-
 
 # Threshold to use for converting to presence/absence
 # Options: kappa,  spec_sens, no_omission, prevalence, equal_sens_spec, sensitivity
@@ -209,11 +208,13 @@ for (t in taxons){
   dir_func <- function(sps_data_presences, worldclim_all, sps_data_absences, fc){ # to avoid stop modelling if low number of background points or other errors
     res <- tryCatch(
       {
-        modl1 <- ENMevaluate(occs = sps_data_presences[, .SD, .SDcols = names(worldclim_all)], 
+        modl1 <- ENMevaluate(occs = sps_data_presences[1:3000, .SD, .SDcols = names(worldclim_all)], 
                              envs = NULL, 
                              bg = sps_data_absences[, names(sps_data_absences) %in% names(worldclim_all)], 
                              algorithm = 'maxnet', 
-                             partitions = 'block', 
+                             #partitions = 'block', 
+                             partitions = "testing",
+                             occs.testing = sps_data_presences[3001:3750, .SD, .SDcols = names(worldclim_all)],  # occurrences for testing; only when partitions = 'testing'
                              tune.args = list(
                                #fc = c("L","LQ","LQH","H"),
                                #fc = c("L","LQ","LQH"),  # removed "H" because there is some bug in maxnet that gives error for some species
@@ -407,4 +408,77 @@ mean(info_models$auc.val.avg)
 mean(info_models$auc.train)
 mean(info_models$cbi.val.avg)
 mean(info_models$cbi.train)
+
+
+
+## Modelling with Multilayer perceptrons ####
+
+# Multilayer Perceptrons: The simplest deep networks, they consist of multiple layers of neurons each 
+# fully connected to those in the layer below (from which receive input) and those above (which they influence).
+# 
+
+library(raster)
+library(sf)
+library(keras)
+library(dplyr)
+
+
+
+for (t in taxons){
+  #print(t)
+  t0 <- Sys.time()
+  sps <- spcies[spcies$taxons == t, "sps"]
+  
+  print(paste0("running Multilayer Perceptrons for... ", sps))
+  
+  dir2save <- paste0("models_MLP_", t, "/")
+  if(!dir.exists(paste0("models_MLP_", t))) {
+    dir.create(dir2save)
+  }
+  
+  occs_i <- occs_all[occs_all$sp2 %in% t, c("decimalLongitude", "decimalLatitude")]
+  occurrences_GBIF <- nrow(occs_i)
+  
+  occs_i_shp <- SpatialPointsDataFrame(coords = occs_i[, c("decimalLongitude", "decimalLatitude")],
+                                       data = data.frame(sp = rep(1, nrow(occs_i))),
+                                       proj4string = CRS("+init=EPSG:4326"))
+  
+  occs_i_rstr <- rasterize(occs_i_shp, worldclim_all[[1]], field = "sp", background = 0)
+  occs_i_rstr <- mask(occs_i_rstr, worldclim_all[[1]])
+  
+  ## occurrences for training/testing
+  sps_data <- stack(occs_i_rstr, worldclim_all) 
+  sps_data <- as.data.table(as.data.frame(sps_data))
+  sps_data[, raster_position := 1:nrow(sps_data)]
+  
+  # data set for presences
+  sps_data_presences <- sps_data[layer == 1, ]
+  sps_data_presences <- sps_data_presences[complete.cases(sps_data_presences), ]
+  occurrences_1km <- nrow(sps_data_presences)
+  rm(sps_data); gc()
+  
+  # data set for pseudo-absences
+  sps_data_absences <- as.data.frame(raster::extract(worldclim_all, bckgr, cellnumbers = TRUE))
+  sps_data_absences <- sps_data_absences[!sps_data_absences$cells %in% sps_data_presences$raster_position, ]
+  names(sps_data_absences)
+  
+  
+  # For now, each point is associated to a one (the same) point of the explanatory variables.
+  # Later, following Botella's approach (?), each point (presence and absence) can be associated to a 
+  # matrix of pixels surrounding the point (e.g. 3x3 or 5x5). This is to capture the influence of 
+  # the "micro-habitat" of the plant.
+  
+  
+
+
+
+    
+
+  
+  
+  
+   
+}
+
+
 
