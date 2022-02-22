@@ -10,6 +10,7 @@ library(sf)
 library(virtualspecies)
 library(dplyr)
 library(data.table)
+library(terra)
 
 getwd()
 wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/dl_sdm_test/"
@@ -17,6 +18,28 @@ wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/dl_sdm_single/"
 wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/cnn_sdm_single/"
 wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/cnn_3D_sdm_single/"
 wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/virtualspecies/"
+
+
+if(Sys.info()[4] == "D01RI1700308") {
+  wd <- ""
+}else if(Sys.info()[4] == "S-JRCIPRAP320P") {
+  wd <- ""
+}else if(Sys.info()[4] == "MacBook-MacBook-Pro-de-Xavier.local") {
+  wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/virtualspecies"
+  gbif_creds <- "/Users/xavi_rp/Dropbox/GBIF_credentials/"
+}else if(Sys.info()[4] %in% c("jeodpp-terminal-jd001-03", "jeodpp-terminal-03", "jeodpp-terminal-dev-12")) {
+  if(!dir.exists("/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies/")) 
+    dir.create("/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies/")
+  if(!dir.exists("/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies/")) 
+    dir.create("/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies/")
+  dir2save <- "/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies/"
+  wd <- "/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies/"
+  gbif_creds <- "/home/rotllxa/Documents/"
+}else{
+  wd <- ""
+  gbif_creds <- ""
+}
+
 setwd(wd)
 
 #bioscrop <- brick("../dl_sdm_test/bioscrop.tif")    # 10 km
@@ -26,15 +49,15 @@ setwd(wd)
 #plot(bioscrop[[1]])
 
 
-worldclim_path <- "/Users/xavi_rp/Documents/MinBA_models/wc5"      # 10km
-worldclim_path0.5 <- "/Users/xavi_rp/Documents/MinBA_models/wc0.5" #  1km
+#worldclim_path <- "/Users/xavi_rp/Documents/MinBA_models/wc5"      # 10km
+#worldclim_path0.5 <- "/Users/xavi_rp/Documents/MinBA_models/wc0.5" #  1km
 
-worldclim_files <- list.files(worldclim_path0.5, full.names = TRUE)
-worldclim_files <- worldclim_files[grepl("bil$", worldclim_files) | grepl("tif$", worldclim_files)]
-worldclim_files
+#worldclim_files <- list.files(worldclim_path0.5, full.names = TRUE)
+#worldclim_files <- worldclim_files[grepl("bil$", worldclim_files) | grepl("tif$", worldclim_files)]
+#worldclim_files
 
-worldclim_all <- stack(worldclim_files)
-plot(worldclim_all[[20]])
+#worldclim_all <- stack(worldclim_files)
+#plot(worldclim_all[[20]])
 
 ## elevation (aggregated from 30'' to 5')
 #worldclim_files <- list.files(worldclim_path0.5, full.names = TRUE)
@@ -45,11 +68,11 @@ plot(worldclim_all[[20]])
 #worldclim_all <- stack(worldclim_all, elev5)
 #worldclim_all
 
-eur_coords <- c(-13, 48, 35, 72)
+#eur_coords <- c(-13, 48, 35, 72)
 
-worldclim_all <- crop(worldclim_all, eur_coords)
-worldclim_all
-plot(worldclim_all[[1]])
+#worldclim_all <- crop(worldclim_all, eur_coords)
+#worldclim_all
+#plot(worldclim_all[[1]])
 
 
 ## elevation (from Worldclim 30'')
@@ -63,6 +86,28 @@ plot(worldclim_all[[1]])
 #elev5 <- crop(elev5, worldclim_all)
 #elev5
 #writeRaster(elev5, filename = paste0(worldclim_path, "/elev_aggregated.tif"), overwrite = TRUE)
+
+
+
+## Predictors ####
+
+preds_dir <- "/eos/jeodpp/home/users/rotllxa/European_butterflies_SDMs_data/"
+
+worldclim_all <- stack(paste0(preds_dir, "worldclim_all.tif"))
+#worldclim_all <- rast(paste0(preds_dir, "worldclim_all.tif"))
+worldclim_all
+worldclim_all_names <- c("wc2.1_30s_bio_1", "wc2.1_30s_bio_10", "wc2.1_30s_bio_11", "wc2.1_30s_bio_12", "wc2.1_30s_bio_13", "wc2.1_30s_bio_14",
+                         "wc2.1_30s_bio_15", "wc2.1_30s_bio_16", "wc2.1_30s_bio_17", "wc2.1_30s_bio_18", "wc2.1_30s_bio_19", "wc2.1_30s_bio_2",
+                         "wc2.1_30s_bio_3", "wc2.1_30s_bio_4", "wc2.1_30s_bio_5", "wc2.1_30s_bio_6", "wc2.1_30s_bio_7", "wc2.1_30s_bio_8",
+                         "wc2.1_30s_bio_9",  "wc2.1_30s_elev") 
+worldclim_all_names <- gsub("wc2.1_30s_", "", worldclim_all_names)
+names(worldclim_all) <- worldclim_all_names
+#worldclim_all <- stack(worldclim_all)
+worldclim_all
+
+
+#worldclim_all_data <- fread(paste0(preds_dir, "worldclim_all_data.csv"), header = TRUE)
+#names(worldclim_all_data)
 
 
 
@@ -95,8 +140,8 @@ repeat{
                                              convert.to.PA = TRUE,
                                              sample.points = TRUE,  # for large rasters, pick nb.points 
                                              #nb.points = 10000,
-                                             #nb.points = 8153664, # 5%  # sum(!is.na(getValues(worldclim_all))) * 0.05
-                                             nb.points = 1630733, # 1%  # sum(!is.na(getValues(worldclim_all))) * 0.001
+                                             nb.points = 8153664, # 5%  # sum(!is.na(getValues(worldclim_all))) * 0.05
+                                             #nb.points = 1630733, # 1%  # sum(!is.na(getValues(worldclim_all))) * 0.001
                                              relations = c("logistic"),
                                              realistic.sp = TRUE,
                                              PA.method = "threshold",
@@ -113,14 +158,15 @@ repeat{
   
 }
 
-head(virtSp_occurrences)
-nrow(virtSp_occurrences)
-
+str(virtSps[[24]])
+str(virtSps[[2]])
 str(virtSps[[1]])
 
-## Plotting all virtual species maps
+
+
+## Plotting all virtual species maps ####
 for(i in 1:repetitions){
-  pdf(paste0("virtual_sp_", i, ".pdf"), height = 7, width = 9)
+  pdf(paste0(dir2save, "virtual_sp_", i, ".pdf"), height = 7, width = 9)
   par(mar = c(3, 6, 8, 6), bty = "n")
   #par(xpd = TRUE)
   par(mfrow = c(2, 2))
@@ -138,7 +184,7 @@ for(i in 1:repetitions){
 }
 
 
-## Getting presence points 
+## Getting presence points ####
 virtSps[[1]]
 for(i in 1:repetitions){
   # sample n2sample occurrences; where n2sample is randomly generated between 1 and total occurrences of the sp
@@ -161,7 +207,7 @@ for(i in 1:repetitions){
 
 head(virtSp_occurrences)
 nrow(virtSp_occurrences)
-table(virtSp_occurrences$species)
+sort(table(virtSp_occurrences$species))
 
 
 #presence.points <- sampleOccurrences(virtSps[[i]],
@@ -188,8 +234,8 @@ table(virtSp_occurrences$species)
 
 
 #
-write.csv(virtSp_occurrences, "virtSp_occurrences.csv", row.names = FALSE)
-save(virtSps, file = "virtSp_allinfo.RData")
+write.csv(virtSp_occurrences, paste0("virtSp_occurrences.csv"), row.names = FALSE)
+save(virtSps, file = paste0("virtSp_allinfo.RData"))
 
 
 
