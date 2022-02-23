@@ -18,8 +18,14 @@ if(Sys.info()[4] == "D01RI1700308") {
     dir.create("/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/")
   if(!dir.exists("/scratch/rotllxa/DL-SDM_benchmarking_data/")) 
     dir.create("/scratch/rotllxa/DL-SDM_benchmarking_data/")
+  if(!dir.exists("/scratch/rotllxa/DL-SDM_benchmarking_data_dev/")) 
+    dir.create("/scratch/rotllxa/DL-SDM_benchmarking_data_dev/")
   dir2save <- "/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/"
-  wd <- "/scratch/rotllxa/DL-SDM_benchmarking_data/"
+  if(Sys.info()[4] == "jeodpp-terminal-jd001-03"){
+    wd <- "/scratch/rotllxa/DL-SDM_benchmarking_data/"
+  }else{
+    wd <- "/scratch/rotllxa/DL-SDM_benchmarking_data_dev/"
+  }
   gbif_creds <- "/home/rotllxa/Documents/"
 }else{
   wd <- ""
@@ -244,7 +250,7 @@ for (t in taxons){
   rm(sps_data); gc()
   
   # data set for pseudo-absences
-  sps_data_absences <- as.data.frame(raster::extract(worldclim_all, bckgr, cellnumbers = TRUE))
+  sps_data_absences <- as.data.table(as.data.frame(raster::extract(worldclim_all, bckgr, cellnumbers = TRUE)))
   sps_data_absences <- sps_data_absences[!sps_data_absences$cells %in% sps_data_presences$raster_position, ]
   names(sps_data_absences)
   
@@ -276,7 +282,7 @@ for (t in taxons){
         #modl1 <- ENMevaluate(occs = sps_data_presences[1:3000, .SD, .SDcols = names(worldclim_all)], 
         modl1 <- ENMevaluate(occs = sps_data_presences_train[, .SD, .SDcols = names(worldclim_all)], 
                              envs = NULL, 
-                             bg = sps_data_absences[, names(sps_data_absences) %in% names(worldclim_all)], 
+                             bg = sps_data_absences[, .SD, .SDcols = names(worldclim_all)], 
                              algorithm = 'maxnet', 
                              #partitions = 'block', 
                              partitions = "testing",
