@@ -187,6 +187,7 @@ ordr <- names(sort(tbl))
 spcies <- data.frame(taxons = unique(occs_all$sp2), sps = unique(occs_all$species))
 spcies <- spcies[match(ordr, spcies$sps),]
 spcies
+#spcies <- spcies[-c(1:6), ]
 taxons <- spcies$taxons
 taxons
 
@@ -203,7 +204,7 @@ info_models_cnn <- c()     # for Convolutional NN
 
 threshold2use <- "sensitivity"    # deffault 0.9
 #threshold2use <- "no_omission"    # keeping all presences
-
+Sys.time()
 
 for (t in taxons){
   #print(t)
@@ -275,6 +276,8 @@ for (t in taxons){
   ## Running ENMeval (https://jamiemkass.github.io/ENMeval/articles/ENMeval-2.0.0-vignette.html)
   ## Including a tryCatch to avoid stop process if there's an error because of a bug with "H" transformation or something
   
+  library(dismo)
+  library(ENMeval)
   
   dir_func <- function(sps_data_presences, worldclim_all, sps_data_absences, fc){ # to avoid stop modelling if low number of background points or other errors
     res <- tryCatch(
@@ -471,6 +474,7 @@ for (t in taxons){
   #write.csv(info_models_maxent, "info_modelling_all_species.csv", row.names = FALSE)
   #write.csv(info_models_maxent, "info_modelling_all_species_085.csv", row.names = FALSE)
   write.csv(info_models_maxent, "info_modelling_maxent_all_VirtualSpecies.csv", row.names = FALSE)
+  write.csv(info_models_maxent, paste0(dir2save_maxent, "info_modelling_maxent_all_VirtualSpecies.csv"), row.names = FALSE)
 
   print(paste0(t, " run in: ", running_time))
   
@@ -481,6 +485,10 @@ for (t in taxons){
   # Multilayer Perceptrons: The simplest deep networks, they consist of multiple layers of neurons each 
   # fully connected to those in the layer below (from which receive input) and those above (which they influence).
   # 
+  library(reticulate)
+  use_condaenv('conda_R_env')
+  library(tensorflow)
+  library("keras")
   
   #print(t)
   t0 <- Sys.time()
@@ -749,7 +757,7 @@ for (t in taxons){
   thr <- rbind(a, b)
   
   sps_preds_rstr_pres_abs <- reclassify(sps_preds_rstr[["predictions_MLP"]], rcl = thr, filename = '', include.lowest = FALSE, right = TRUE)
-  sps_preds_rstr_pres_abs_all <- brick(sps_preds_rstr_pres_abs_all, sps_preds_rstr_pres_abs)
+  sps_preds_rstr_pres_abs_all <- stack(sps_preds_rstr_pres_abs_all, sps_preds_rstr_pres_abs)
   names(sps_preds_rstr_pres_abs_all) <- c("Pres_Abs_MaxEnt", "Pres_Abs_MLP")
   #plot(sps_preds_rstr_pres_abs)
   
@@ -781,6 +789,7 @@ for (t in taxons){
   
   info_models_mlp <- rbind(info_models_mlp, data2save)
   write.csv(info_models_mlp, "info_models_MLP_all_VirtualSpecies.csv", row.names = FALSE)
+  write.csv(info_models_mlp, paste0(dir2save_mlp, "info_models_MLP_all_VirtualSpecies.csv"), row.names = FALSE)
   
   print(paste0(t, " run in: ", running_time))
   
@@ -997,7 +1006,7 @@ for (t in taxons){
   thr <- rbind(a, b)
   
   sps_preds_rstr_pres_abs <- reclassify(sps_preds_rstr[["predictions_CNN"]], rcl = thr, filename = '', include.lowest = FALSE, right = TRUE)
-  sps_preds_rstr_pres_abs_all <- brick(sps_preds_rstr_pres_abs_all, sps_preds_rstr_pres_abs)
+  sps_preds_rstr_pres_abs_all <- stack(sps_preds_rstr_pres_abs_all, sps_preds_rstr_pres_abs)
   names(sps_preds_rstr_pres_abs_all) <- c("Pres_Abs_MaxEnt", "Pres_Abs_MLP", "Pres_Abs_CNN")
   
   
@@ -1031,7 +1040,11 @@ for (t in taxons){
   
   info_models_cnn <- rbind(info_models_cnn, data2save)
   write.csv(info_models_cnn, "info_models_CNN_all_VirtualSpecies.csv", row.names = FALSE)
+  write.csv(info_models_cnn, paste0(dir2save_cnn, "info_models_CNN_all_VirtualSpecies.csv"), row.names = FALSE)
   
+  writeRaster(sps_preds_rstr_pres_abs_all, paste0(dir2save_cnn, "sps_preds_rstr_pres_abs_all.tif"))
+  writeRaster(sps_preds_rstr, paste0(dir2save_cnn, "sps_preds_rstr.tif"))
+
   print(paste0(t, " run in: ", running_time))
   
   
@@ -1041,7 +1054,7 @@ for (t in taxons){
   #names(sps_preds_rstr_pres_abs_all) <- c("Pres_Abs_MaxEnt", "Pres_Abs_MLP", "Pres_Abs_CNN")
   
   
-  pdf(paste0(dir2save_cnn, "Pres-Abs_MaxEnt_MLP_CNN_", t, ".pdf", width = 20, height = 20))
+  pdf(paste0(dir2save_cnn, "Pres-Abs_MaxEnt_MLP_CNN_", t, ".pdf"), width = 20, height = 20)
   par(mfrow = c(2, 2))
   par(mar = c(8, 4, 4, 5))
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_MaxEnt"]], col = "grey", 
@@ -1057,7 +1070,20 @@ for (t in taxons){
   
   
   
+  if(exists("model")) rm(model)
+  if(exists("model_c")) rm(model_c)
   
+  
+  files <- list.files(tempdir(), full.names = TRUE)
+  unlink(files, recursive = TRUE); rm(files)
+  
+  files <- list.files("/scratch/rotllxa", full.names = TRUE)
+  files <- files[grepl("py", files)]
+  unlink(files, recursive = TRUE); rm(files)
+  
+ 
+  detach(package:reticulate,unload=TRUE)
+  detach(package:keras,unload=TRUE)
   
   #
   
