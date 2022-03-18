@@ -32,8 +32,14 @@ if(Sys.info()[4] == "D01RI1700308") {
     dir.create("/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies/")
   if(!dir.exists("/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies/")) 
     dir.create("/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies/")
+  if(!dir.exists("/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies_ibp/")) 
+    dir.create("/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies_ibp/")
+  if(!dir.exists("/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies_ibp/")) 
+    dir.create("/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies_ibp/")
   dir2save <- "/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies/"
+  dir2save <- "/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies_ibp/"
   wd <- "/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies/"
+  wd <- "/scratch/rotllxa/DL-SDM_benchmarking_data/virtualspecies_ibp/"
   gbif_creds <- "/home/rotllxa/Documents/"
 }else{
   wd <- ""
@@ -140,7 +146,8 @@ repeat{
                                              convert.to.PA = TRUE,
                                              sample.points = TRUE,  # for large rasters, pick nb.points 
                                              #nb.points = 10000,
-                                             nb.points = 8153664, # 5%  # sum(!is.na(getValues(worldclim_all))) * 0.05
+                                             nb.points = 1627379, # 5% (Iberian Pen.)  # sum(!is.na(getValues(worldclim_all))) * 0.05
+                                             #nb.points = 8153664, # 5%  # sum(!is.na(getValues(worldclim_all))) * 0.05
                                              #nb.points = 1630733, # 1%  # sum(!is.na(getValues(worldclim_all))) * 0.001
                                              relations = c("logistic"),
                                              realistic.sp = TRUE,
@@ -234,8 +241,8 @@ sort(table(virtSp_occurrences$species))
 
 
 #
-write.csv(virtSp_occurrences, paste0("virtSp_occurrences.csv"), row.names = FALSE)
-save(virtSps, file = paste0("virtSp_allinfo.RData"))
+write.csv(virtSp_occurrences, paste0(dir2save, "virtSp_occurrences.csv"), row.names = FALSE)
+save(virtSps, file = paste0(dir2save, "virtSp_allinfo.RData"))
 
 
 

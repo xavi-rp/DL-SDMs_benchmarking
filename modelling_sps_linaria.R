@@ -11,7 +11,8 @@ if(Sys.info()[4] == "D01RI1700308") {
 }else if(Sys.info()[4] == "S-JRCIPRAP320P") {
   wd <- ""
 }else if(Sys.info()[4] == "MacBook-MacBook-Pro-de-Xavier.local") {
-  wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/DL-SDM_benchmarking_data/"
+  wd0 <- "/Users/xavi_rp/Documents/D5_FFGRCC/DL-SDM_benchmarking_data/"
+  wd <- "/Users/xavi_rp/Documents/D5_FFGRCC/DL-SDM_benchmarking_Linaria"
   gbif_creds <- "/Users/xavi_rp/Dropbox/GBIF_credentials/"
 }else if(Sys.info()[4] %in% c("jeodpp-terminal-jd001-03", "jeodpp-terminal-03", "jeodpp-terminal-dev-12")) {
   if(!dir.exists("/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/")) 
@@ -51,12 +52,12 @@ library(keras)
 #install_keras(tensorflow = "cpu", method = "conda", envname = "conda_Renv_2", version = "2.7.0")
 #install_keras(tensorflow = "cpu", method = "conda", envname = "conda_R_env", version = "2.7.0")
 #Sys.setenv(RETICULATE_PYTHON = "/home/rotllxa/.conda/envs/CONDA_R_ENVIRONMENT_NAME/bin/python")
-library(reticulate)
+#library(reticulate)
 ##use_condaenv('CONDA_R_ENVIRONMENT_NAME')
 #use_condaenv('conda_Renv_2')
-use_condaenv('conda_R_env')
-library(tensorflow)
-library("keras")
+#use_condaenv('conda_R_env')
+#library(tensorflow)
+#library("keras")
 keras_model_sequential()
 
 
@@ -64,7 +65,7 @@ keras_model_sequential()
 ## Predictors ####
 
 preds_dir <- "/eos/jeodpp/home/users/rotllxa/European_butterflies_SDMs_data/"
-#preds_dir <- wd
+preds_dir <- wd0
 
 #worldclim_path0.5 <- "/Users/xavi_rp/Documents/MinBA_models/wc0.5" #  1km
 
@@ -92,7 +93,6 @@ worldclim_all
 
 
 
-lc_dir <- "/Users/xavi_rp/Documents/D5_FFGRCC/land_cover/"
 lc_dir <- "/eos/jeodpp/home/users/rotllxa/land_cover/"
 lc1km_files <- list.files(lc_dir, full.names = TRUE)[grepl("lc1km_", list.files(lc_dir))]
 lc1km_files
@@ -103,28 +103,16 @@ lc1km_all
 worldclim_all <- stack(worldclim_all, lc1km_all)
 names(worldclim_all)
 worldclim_all
-
-extnt_iber <- c(-11, 4, 36, 44)  #(xmin, xmax, ymin, ymax)
-worldclim_all_ibp <- crop(worldclim_all, extent(extnt_iber))
-#dev.off()
-#plot(worldclim_all_ibp[[4]])
-#writeRaster(worldclim_all_ibp, "worldclim_all_ibp.tif")
-worldclim_all <- brick("worldclim_all_ibp.tif")
-worldclim_all
-#plot(worldclim_all[[4]])
+#plot(worldclim_all[[5]])
 
 
-#worldclim_all_data <- fread(paste0(preds_dir, "worldclim_all_data.csv"), header = TRUE)
-#names(worldclim_all_data) <- names(worldclim_all)
-#worldclim_all_data
-
-#worldclim_all_data <- as.data.table(as.data.frame(worldclim_all))
-#worldclim_all_data <- worldclim_all_data[complete.cases(worldclim_all_data), ]
-#nrow(worldclim_all_data)
-#write.csv(worldclim_all_data, paste0(preds_dir, "worldclim_all_data_ibp.csv"), row.names = FALSE)
-
-worldclim_all_data <- fread(paste0(preds_dir, "worldclim_all_data_ibp.csv"), header = TRUE)
+worldclim_all_data <- fread(paste0(preds_dir, "worldclim_all_data.csv"), header = TRUE)
 names(worldclim_all_data) <- names(worldclim_all)
+worldclim_all_data
+
+summary(worldclim_all_data$bio_1)
+summary(getValues(worldclim_all[["bio_1"]]))
+
 
 
 # removing collinearity
@@ -171,14 +159,6 @@ names(worldclim_all_data) <- names(worldclim_all)
 ##write.csv(worldclim_all_data, "worldclim_all_data.csv", row.names = FALSE)
 #names(worldclim_all_data)
 
-load("vables_NoC_070.RData", verbose = T)
-vables_NoC
-worldclim_all_data <- fread("worldclim_all_data_NoCor_070.csv")
-names(worldclim_all_data)
-
-worldclim_all <- stack(paste0(preds_dir, "worldclim_all.tif"))
-worldclim_all <- worldclim_all[[vables_NoC]]
-names(worldclim_all)
 
 
 ## Background points ####
@@ -190,12 +170,11 @@ bckgr <- as.data.frame(bckgr)
 head(bckgr)
 nrow(bckgr)
 
-write.csv(bckgr, paste0(preds_dir, "background_points_ibp.csv"), row.names = FALSE)
-#bckgr <- read.csv(paste0(preds_dir, "background_points.csv"), header = TRUE)
-bckgr <- read.csv(paste0(preds_dir, "background_points_ibp.csv"), header = TRUE)
+write.csv(bckgr, "background_points.csv", row.names = FALSE)
+bckgr <- read.csv(paste0(preds_dir, "background_points.csv"), header = TRUE)
 
 # checking coverage
-pdf("background_10k_ibp.pdf")
+pdf("background_15k.pdf")
 plot(worldclim_all[[1]])
 points(bckgr, pch = 20, cex = 0.2)
 dev.off()
@@ -203,21 +182,27 @@ dev.off()
 
 
 ## Virtual Occurrences ####
-virt_sp_dir <- "/Users/xavi_rp/Documents/D5_FFGRCC/virtualspecies/"
 virt_sp_dir <- "/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies/"
-virt_sp_dir <- "/eos/jeodpp/home/users/rotllxa/DL-SDM_benchmarking_data/virtualspecies_ibp/"
 occs_all <- fread(paste0(virt_sp_dir, "virtSp_occurrences.csv"), header = TRUE)
+
+load("../dl_sdm_test/sprecords.RData", verbose = TRUE)
+sprecords 
+occs_all <- as.data.table(sprecords )
+
 occs_all[, sp2 := species]
-setnames(occs_all, c("lon", "lat"), c("decimalLongitude", "decimalLatitude"))
+#setnames(occs_all, c("lon", "lat"), c("decimalLongitude", "decimalLatitude"))
+
+occs_all$species <- gsub(" ", "_", occs_all$species)
+occs_all$sp2 <- gsub(" ", "_", occs_all$sp2)
+
 head(occs_all)
 sort(table(occs_all$species))
 tbl <- table(occs_all$species)
 ordr <- names(sort(tbl))
-#ordr <- names(sort(tbl, decreasing = TRUE))
 spcies <- data.frame(taxons = unique(occs_all$sp2), sps = unique(occs_all$species))
 spcies <- spcies[match(ordr, spcies$sps),]
 spcies
-#spcies <- spcies[-c(1:7), ]
+#spcies <- spcies[-c(1:6), ]
 taxons <- spcies$taxons
 taxons
 
@@ -227,7 +212,7 @@ taxons
 info_models_maxent <- c()
 info_models_mlp <- c()     # for MultiLayer Perceptrons
 info_models_cnn <- c()     # for Convolutional NN
-info_models_cnnt <- c()     # for CNN with tensors
+info_models_cnnt <- c()     # for Convolutional NN
 
 
 # Threshold to use for converting to presence/absence
@@ -313,8 +298,6 @@ for (t in taxons){
   dir_func <- function(sps_data_presences, worldclim_all, sps_data_absences, fc){ # to avoid stop modelling if low number of background points or other errors
     res <- tryCatch(
       {
-        library(dismo)
-        library(ENMeval)
         #modl1 <- ENMevaluate(occs = sps_data_presences[1:3000, .SD, .SDcols = names(worldclim_all)], 
         modl1 <- ENMevaluate(occs = sps_data_presences_train[, .SD, .SDcols = names(worldclim_all)], 
                              envs = NULL, 
@@ -333,10 +316,9 @@ for (t in taxons){
                                rm = c(1, 2, 5)
                                #rm = 1:2
                              ),
-                             #parallel = TRUE,
-                             parallel = FALSE,
-                             #numCores = 12
-                             numCores = 4
+                             parallel = TRUE,
+                             numCores = 12
+                             #numCores = 4
         )
         
       },
@@ -498,10 +480,10 @@ for (t in taxons){
   
   
   running_time <- as.vector(Sys.time() - t0)
-  if(exists("data2save")) rm(data2save)
-  data2save <- data.frame(species = t, occurrences_raw, occurrences_1km, occurrences_train,
+  
+  data2save <- (data.frame(species = t, occurrences_raw, occurrences_1km, occurrences_train,
                            occurrences_test, background_points, optimal,
-                           thresholds, threshold_used)
+                           thresholds, threshold_used))
   rownames(data2save) <- t
   
   info_models_maxent <- rbind(info_models_maxent, data2save)
@@ -519,11 +501,10 @@ for (t in taxons){
   # Multilayer Perceptrons: The simplest deep networks, they consist of multiple layers of neurons each 
   # fully connected to those in the layer below (from which receive input) and those above (which they influence).
   # 
-
   #library(reticulate)
   #use_condaenv('conda_R_env')
   #library(tensorflow)
-  library("keras")
+  #library("keras")
   
   #print(t)
   t0 <- Sys.time()
@@ -775,10 +756,10 @@ for (t in taxons){
                                   res = 100, 
                                   PEplot = TRUE)
   
-  as.vector(unlist(BI_mlp[grepl("cor", names(BI_mlp))]))
-  #BI_mlp$cor  # 0.962 (DL)
   
-
+  BI_mlp$cor  # 0.962 (DL)
+  
+  
   thresholds <- dismo::threshold(dismo::evaluate(extract(sps_preds_rstr[["predictions_MLP"]], occs_i_shp), 
                                                  extract(sps_preds_rstr[["predictions_MLP"]], bckgr))) # sensitibity default 0.9
   thresholds
@@ -815,14 +796,11 @@ for (t in taxons){
   
   running_time <- as.vector(Sys.time() - t0)
   
-  if(exists("data2save")) rm(data2save)
-  data2save <- data.frame(species = t, occurrences_raw, occurrences_1km, occurrences_train,
+  data2save <- (data.frame(species = t, occurrences_raw, occurrences_1km, occurrences_train,
                            occurrences_test, background_points, 
                            auc.val = as.vector(score_mlp_test[grepl("auc", names(score_mlp_test))]),
-                           cbi.val = as.vector(unlist(BI_mlp[grepl("cor", names(BI_mlp))])),
-                           #cbi.val = BI_mlp$cor,
-                           thresholds, threshold_used)
-
+                           cbi.val = BI_mlp$cor,
+                           thresholds, threshold_used))
   rownames(data2save) <- t
   
   info_models_mlp <- rbind(info_models_mlp, data2save)
@@ -874,7 +852,7 @@ for (t in taxons){
   sps_train_array_x <- array(as.matrix(sps_train_data_1), dim = c(nrow(sps_train_data_1), ncol(sps_train_data_1), 1))
   dim(sps_train_array_x)
   
-  #linaria_train_array_y <- to_categorical(as.matrix(linaria_train[, 1]))
+  #sps_train_array_y <- to_categorical(as.matrix(sps_train[, 1]))
   sps_train_array_y <- as.matrix(sps_train_labels)
   dim(sps_train_array_y)
   head(sps_train_array_y)
@@ -883,7 +861,7 @@ for (t in taxons){
   
   sps_test_array_x <- array(as.matrix(sps_test_data_1), dim = c(nrow(sps_test_data_1), ncol(sps_test_data_1), 1))
   dim(sps_test_array_x)
-  #linaria_test_array_y <- to_categorical(as.matrix(linaria_test[, 1]))
+  #sps_test_array_y <- to_categorical(as.matrix(sps_test[, 1]))
   sps_test_array_y <- as.matrix(sps_test_data[, "layer", drop = FALSE])
   dim(sps_test_array_y)
   
@@ -897,6 +875,7 @@ for (t in taxons){
   if(exists("model_c")) rm(model); gc()
   
   inpt_shpe <- length(sps_test_data_1)  # input_shape = c(ncol(dataTrain_x), nrow(dataTrain_x))) 
+                                        # number of variables
   
   model_c <- keras_model_sequential()
   
@@ -1027,10 +1006,10 @@ for (t in taxons){
                                    res = 100, 
                                    PEplot = TRUE)
   
-
-  as.vector(unlist(BI_cnn[grepl("cor", names(BI_cnn))]))
-  #BI_cnn$cor  # 0.89 (CNN)
-
+  
+  BI_cnn$cor  # 0.89 (CNN)
+  
+  
   thresholds <- dismo::threshold(dismo::evaluate(extract(sps_preds_rstr[["predictions_CNN"]], occs_i_shp), 
                                                  extract(sps_preds_rstr[["predictions_CNN"]], bckgr))) # sensitibity default 0.9
   thresholds
@@ -1067,26 +1046,24 @@ for (t in taxons){
   
   ## saving results
   running_time <- as.vector(Sys.time() - t0)
-  if(exists("data2save")) rm(data2save)
+  
   data2save <- (data.frame(species = t, occurrences_raw, occurrences_1km, occurrences_train,
                            occurrences_test, background_points,
                            auc.train = as.vector(score_cnn_train[grepl("auc", names(score_cnn_train))]),
                            auc.val = as.vector(score_cnn_test[grepl("auc", names(score_cnn_test))]),
-                           #cbi.val = BI_cnn$cor,
-                           cbi.val = as.vector(unlist(BI_cnn[grepl("cor", names(BI_cnn))])),
+                           cbi.val = BI_cnn$cor,
                            thresholds, threshold_used))
   rownames(data2save) <- t
   
   info_models_cnn <- rbind(info_models_cnn, data2save)
+  
   write.csv(info_models_cnn, "info_models_CNN_all_VirtualSpecies.csv", row.names = FALSE)
   write.csv(info_models_cnn, paste0(dir2save_cnn, "info_models_CNN_all_VirtualSpecies.csv"), row.names = FALSE)
   
-  writeRaster(sps_preds_rstr_pres_abs_all, paste0(dir2save_cnn, "sps_preds_rstr_pres_abs_all.tif"), overwrite = TRUE)
-  writeRaster(sps_preds_rstr, paste0(dir2save_cnn, "sps_preds_rstr.tif"), overwrite = TRUE)
+  writeRaster(sps_preds_rstr_pres_abs_all, paste0(dir2save_cnn, "sps_preds_rstr_pres_abs_all.tif"))
+  writeRaster(sps_preds_rstr, paste0(dir2save_cnn, "sps_preds_rstr.tif"))
 
   print(paste0(t, " run in: ", running_time))
-  print(Sys.time())
-  
   
   
   
@@ -1117,7 +1094,7 @@ for (t in taxons){
   matrix_dim <- 3
   adj_cells <- matrix(1, nrow = matrix_dim, ncol = matrix_dim) # 49 pixels
   adj_cells[ceiling(matrix_dim / 2), ceiling(matrix_dim / 2)] <- 0
-  #View(adj_cells)
+  View(adj_cells)
   
   x <- adjacent(occs_i_rstr, 
                 cells = Which(occs_i_rstr == 1, cells = TRUE),
@@ -1155,16 +1132,16 @@ for (t in taxons){
   
   
   sps_pres_tensor_array <- aperm(array(unlist(sps_pres_tensor_grouped[[1]][, 3:length(sps_pres_tensor)]), 
-                                       dim = c(matrix_dim, matrix_dim, (length(sps_pres_tensor) - 2))),
-                                 c(2, 1, 3))
+                                           dim = c(matrix_dim, matrix_dim, (length(sps_pres_tensor) - 2))),
+                                     c(2, 1, 3))
   
   
   for(i in 2:length(sps_pres_tensor_grouped)){
     sps_pres_tensor_array2 <- aperm(array(unlist(sps_pres_tensor_grouped[[i]][, 3:length(sps_pres_tensor)]), 
-                                          dim = c(matrix_dim, matrix_dim, (length(sps_pres_tensor) - 2))), 
-                                    c(2, 1, 3))
+                                              dim = c(matrix_dim, matrix_dim, (length(sps_pres_tensor) - 2))), 
+                                        c(2, 1, 3))
     sps_pres_tensor_array <- array(c(sps_pres_tensor_array, sps_pres_tensor_array2), 
-                                   dim = c(matrix_dim, matrix_dim, dim(sps_pres_tensor_array)[3], i))
+                                       dim = c(matrix_dim, matrix_dim, dim(sps_pres_tensor_array)[3], i))
   }
   
   
@@ -1182,7 +1159,7 @@ for (t in taxons){
   #ncell(sps_pres_rstr)
   
   # Selecting a subset of pseudo-absences for training
-  
+
   pseudoAbs_train_cells <- sps_data_absences$cells
   head(sort(pseudoAbs_train_cells))
   
@@ -1219,15 +1196,15 @@ for (t in taxons){
   
   
   sps_abs_tensor_array <- aperm(array(unlist(sps_abs_tensor_grouped[[1]][, 3:length(sps_abs_tensor)]), 
-                                      dim = c(matrix_dim, matrix_dim, (length(sps_abs_tensor) - 2))),
-                                c(2, 1, 3))
+                                          dim = c(matrix_dim, matrix_dim, (length(sps_abs_tensor) - 2))),
+                                    c(2, 1, 3))
   
   for(i in 2:length(sps_abs_tensor_grouped)){
     sps_abs_tensor_array2 <- aperm(array(unlist(sps_abs_tensor_grouped[[i]][, 3:length(sps_abs_tensor)]), 
-                                         dim = c(matrix_dim, matrix_dim, (length(sps_abs_tensor) - 2))), 
-                                   c(2, 1, 3))
+                                             dim = c(matrix_dim, matrix_dim, (length(sps_abs_tensor) - 2))), 
+                                       c(2, 1, 3))
     sps_abs_tensor_array <- array(c(sps_abs_tensor_array, sps_abs_tensor_array2), 
-                                  dim = c(matrix_dim, matrix_dim, dim(sps_abs_tensor_array)[3], i))
+                                      dim = c(matrix_dim, matrix_dim, dim(sps_abs_tensor_array)[3], i))
   }
   
   
@@ -1365,13 +1342,19 @@ for (t in taxons){
   model_ct <- keras_model_sequential()
   
   model_ct %>% 
-    layer_conv_2d(filters = 32, kernel_size = c(3, 3), data_format = "channels_last", padding = "valid", input_shape = inpt_shpe, activation = "relu") %>%
+    layer_conv_2d(filters = 64, kernel_size = c(3, 3), data_format = "channels_last", padding = "valid", input_shape = inpt_shpe, activation = "relu") %>%
     #layer_average_pooling_2d(pool_size = c(2, 2)) %>%
-    #layer_conv_2d(filters = 9, kernel_size = c(2, 2), data_format = "channels_last", padding = "valid", activation = "relu") %>%
-    #
+    #layer_conv_2d(filters = 64, kernel_size = c(5, 5), data_format = "channels_last", padding = "valid", activation = "relu") %>%
+    #layer_average_pooling_2d(pool_size = c(2, 2)) %>%
+    #layer_conv_2d(filters = 32, kernel_size = c(1, 1), data_format = "channels_last", padding = "valid", input_shape = inpt_shpe, activation = "relu") %>%
+    #layer_conv_2d(filters = 64, kernel_size = c(3, 3), data_format = "channels_last", padding = "valid", activation = "relu") %>%
+    #layer_average_pooling_2d(pool_size = c(2, 2)) %>%
+    #layer_conv_2d(filters = 64, kernel_size = c(3, 3), data_format = "channels_last", padding = "valid", activation = "relu") %>%
+    #layer_average_pooling_2d(pool_size = c(2, 2)) %>%
+        #
     #layer_dropout(0.25) %>%
     layer_flatten() %>%
-    layer_dense(units = 9, activation = "relu") %>%
+    layer_dense(units = 32, activation = "relu") %>%
     layer_dense(units = 1, activation = "sigmoid")
   
   
@@ -1405,7 +1388,7 @@ for (t in taxons){
   model_ct %>% 
     compile(
       loss = 'binary_crossentropy',
-      optimizer = optimizer_sgd(learning_rate = 1e-5, momentum = 0.9),
+      optimizer = optimizer_sgd(lr = 1e-5, momentum = 0.9),
       metrics = c(tensorflow::tf$keras$metrics$AUC(), metric_binary_accuracy) # AUC calculation doesn't work if there are NAs in the tensors
     )
   
@@ -1415,22 +1398,22 @@ for (t in taxons){
   sum(is.na(sps_train_array_all_x))
   
   model_ct %>% fit(sps_train_array_all_x, sps_train_array_all_y,
-                   batch_size = 128, 
-                   epochs = 200, 
-                   verbose = 2)
+                    batch_size = 128, 
+                    epochs = 100, 
+                    verbose = 2)
   
   
   score_train <- model_ct %>% evaluate(sps_train_array_all_x, sps_train_array_all_y, batch_size = 128)
   score_train
-  #          loss           auc   binary_accuracy 
-  #    0.00704888      0.99965131      0.99851102
+  #           loss             auc binary_accuracy 
+  #     0.05936323      0.98458362      0.97900498 
   
   sps_test_array_all_x[is.na(sps_test_array_all_x)] <- 0 
   sum(is.na(sps_test_array_all_x))
   score <- model_ct %>% evaluate(sps_test_array_all_x, sps_test_array_all_y, batch_size = 128)
   score #for test data
-  #         loss             auc binary_accuracy 
-  #   0.006295961     0.984028041     0.998903394 
+  #            loss             auc binary_accuracy 
+  #      0.05092596      0.97424096      0.98340517
   
   
   # The gap between training accuracy and test accuracy is an example of "overfitting" 
@@ -1438,7 +1421,7 @@ for (t in taxons){
   # train_accuracy () < test_accuracy ()  --> No overfitting
   # Overfitting is when a machine learning model performs worse on new data than on their training data
   
-  
+ 
   ## Make predictions over the whole extent
   
   #worldclim_all_data <- as.data.frame(worldclim_all)
@@ -1453,78 +1436,58 @@ for (t in taxons){
   if(exists("sps_data")) rm(sps_data); gc()
   if(exists("sps_abs_tensor_grouped")) rm(sps_abs_tensor_grouped); gc()
   
-  if(!file.exists(paste0(preds_dir, "worldclim_all_tensor_array_ibp.rds"))){
-    x1 <- adjacent(worldclim_all, 
-                   cells = Which(!is.na(occs_i_rstr), cells = TRUE),
-                   directions = adj_cells, # 8 for a matrix 3x3; 16 for a matrix 5x5
-                   pairs = TRUE, 
-                   #target = NULL, 
-                   sorted = TRUE, 
-                   include = TRUE, 
-                   id = FALSE)
-    
-    head(as.data.frame(x1), 20)
-    length(unique(as.data.frame(x1)$from))
-    length(unique(as.data.frame(x1)$to))
-    
-    worldclim_all_neighb <- as.data.frame(x1)
-    head(worldclim_all_neighb, 10)
-    
-    worldclim_all_tensor <- worldclim_all[worldclim_all_neighb$to]
-    worldclim_all_tensor <- cbind(worldclim_all_neighb, worldclim_all_tensor)
-    
-    head(worldclim_all_tensor, 20)
-    #View(worldclim_all_tensor)
-    
-    
-    # Creating an array (number_presences x 3 x 3 x number_variables)
-    length(unique(worldclim_all_tensor$from))
-    
-    worldclim_all_tensor_grouped <- worldclim_all_tensor %>% group_by(from) %>% group_split()
-    #worldclim_all_tensor_grouped
-    length(worldclim_all_tensor_grouped)
-    
-    worldclim_all_tensor_grouped[[700]]
-    worldclim_all_tensor_grouped[[1]]
-    
-    #worldclim_all_tensor_array <- aperm(array(unlist(worldclim_all_tensor_grouped[[1]][, 3:length(worldclim_all_tensor)]), 
-    #                                          dim = c(matrix_dim, matrix_dim, (length(worldclim_all_tensor) - 2))),
-    #                                    c(2, 1, 3))
-    
-    
-    
-    worldclim_all_tensor_array <- array(NA, dim = c(matrix_dim, matrix_dim, (length(worldclim_all_tensor) - 2), length(worldclim_all_tensor_grouped)))
-    dim(worldclim_all_tensor_array)
-    
-    for(i in 1:length(worldclim_all_tensor_grouped)){
-      cat("\r", paste0(i, "/", length(worldclim_all_tensor_grouped)))
-      worldclim_all_tensor_array2 <- aperm(array(unlist(worldclim_all_tensor_grouped[[i]][, 3:length(worldclim_all_tensor)]), 
-                                                 dim = c(matrix_dim, matrix_dim, (length(worldclim_all_tensor) - 2))), 
-                                           c(2, 1, 3))
-      worldclim_all_tensor_array[, , , i] <- worldclim_all_tensor_array2
-    }
-    dim(worldclim_all_tensor_array)
-    
-    #for(i in 2:length(worldclim_all_tensor_grouped)){
-    #  cat("\r", paste0(i, "/", length(worldclim_all_tensor_grouped)))
-    #  worldclim_all_tensor_array2 <- aperm(array(unlist(worldclim_all_tensor_grouped[[i]][, 3:length(worldclim_all_tensor)]), 
-    #                                             dim = c(matrix_dim, matrix_dim, (length(worldclim_all_tensor) - 2))), 
-    #                                       c(2, 1, 3))
-    #  worldclim_all_tensor_array <- array(c(worldclim_all_tensor_array, worldclim_all_tensor_array2), 
-    #                                      dim = c(matrix_dim, matrix_dim, dim(worldclim_all_tensor_array)[3], i))
-    #}
-    
-    worldclim_all_tensor_array <- aperm(worldclim_all_tensor_array, c(4, 1, 2, 3))
-    dim(worldclim_all_tensor_array)
-    worldclim_all_tensor_array[1, , ,1]
-    worldclim_all_tensor_array[720399, , ,1]
-    worldclim_all_tensor_array[734, , ,1]
-    worldclim_all_tensor_array2[,,1]
-    saveRDS(worldclim_all_tensor_array, file = paste0(preds_dir, "worldclim_all_tensor_array_ibp.rds"))
-    
-  } else {
-    worldclim_all_tensor_array <- readRDS(paste0(preds_dir, "worldclim_all_tensor_array_ibp.rds"))
+  x1 <- adjacent(worldclim_all, 
+                 cells = Which(!is.na(occs_i_rstr), cells = TRUE),
+                 directions = adj_cells, # 8 for a matrix 3x3; 16 for a matrix 5x5
+                 pairs = TRUE, 
+                 #target = NULL, 
+                 sorted = TRUE, 
+                 include = TRUE, 
+                 id = FALSE)
+  
+  head(as.data.frame(x1), 20)
+  length(unique(as.data.frame(x1)$from))
+  
+  worldclim_all_neighb <- as.data.frame(x1)
+  head(worldclim_all_neighb)
+  
+  worldclim_all_tensor <- worldclim_all[worldclim_all_neighb$to]
+  worldclim_all_tensor <- cbind(worldclim_all_neighb, worldclim_all_tensor)
+  
+  head(worldclim_all_tensor, 20)
+  View(worldclim_all_tensor)
+  
+  
+  # Creating an array (number_presences x 3 x 3 x number_variables)
+  length(unique(worldclim_all_tensor$from))
+  
+  worldclim_all_tensor_grouped <- worldclim_all_tensor %>% group_by(from) %>% group_split()
+  #worldclim_all_tensor_grouped
+  length(worldclim_all_tensor_grouped)
+  
+  worldclim_all_tensor_grouped[[700]]
+  worldclim_all_tensor_grouped[[1]]
+  
+  worldclim_all_tensor_array <- aperm(array(unlist(worldclim_all_tensor_grouped[[1]][, 3:length(worldclim_all_tensor)]), 
+                                       dim = c(matrix_dim, matrix_dim, (length(worldclim_all_tensor) - 2))),
+                                 c(2, 1, 3))
+  
+  for(i in 2:length(worldclim_all_tensor_grouped)){
+    cat("\r", paste0(i, "/", length(worldclim_all_tensor_grouped)))
+    worldclim_all_tensor_array2 <- aperm(array(unlist(worldclim_all_tensor_grouped[[i]][, 3:length(worldclim_all_tensor)]), 
+                                          dim = c(matrix_dim, matrix_dim, (length(worldclim_all_tensor) - 2))), 
+                                    c(2, 1, 3))
+    worldclim_all_tensor_array <- array(c(worldclim_all_tensor_array, worldclim_all_tensor_array2), 
+                                   dim = c(matrix_dim, matrix_dim, dim(worldclim_all_tensor_array)[3], i))
   }
+  
+  worldclim_all_tensor_array <- aperm(worldclim_all_tensor_array, c(4, 1, 2, 3))
+  dim(worldclim_all_tensor_array)
+  worldclim_all_tensor_array[1, , ,1]
+  worldclim_all_tensor_array[734, , ,1]
+  worldclim_all_tensor_array2[,,1]
+  saveRDS(worldclim_all_tensor_array, file = "worldclim_all_tensor_array.rds")
+  worldclim_all_tensor_array <- readRDS("worldclim_all_tensor_array.rds")
   
   #worldclim_all_tensor_array[is.na(worldclim_all_tensor_array)] <- 0 
   #sum(is.na(worldclim_all_tensor_array))
@@ -1573,10 +1536,10 @@ for (t in taxons){
   plot(occs_i_shp, add = TRUE, col = "black")
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_MaxEnt"]], zlim = c(0, 1), main = "MaxEnt", cex.main = 3.5, cex.sub = 2.5,
        sub = paste0("MaxEnt: Boyce Index = ", round(as.vector(optimal$cbi.val), 3), "; AUC = ", round(as.vector(optimal$auc.val), 3)))
-  plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_MLP"]], zlim = c(0, 1), main = "MultiLayer Perceptrons (MLP)", cex.main = 3.5, cex.sub = 2.5,
-       sub = paste0("MLP: Boyce Index = ", round(as.vector(unlist(BI_mlp[grepl("cor", names(BI_mlp))])), 3), "; AUC = ", round(score_mlp_test[grepl("auc", names(score_mlp_test))], 3)))
+  plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_MLP"]], zlim = c(0, 1), main = "MultiLayer Perceptrons (MLP))", cex.main = 3.5, cex.sub = 2.5,
+       sub = paste0("MLP: Boyce Index = ", round(BI_mlp$cor, 3), "; AUC = ", round(score_mlp_test[grepl("auc", names(score_mlp_test))], 3)))
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_CNN"]], zlim = c(0, 1), main = "Convolutional Neural Network (CNN)", cex.main = 3.5, cex.sub = 2.5,
-       sub = paste0("CNN: Boyce Index = ", round(as.vector(unlist(BI_cnn[grepl("cor", names(BI_cnn))])), 3), "; AUC = ", round(score_cnn_test[grepl("auc", names(score_cnn_test))], 3)))
+       sub = paste0("CNN: Boyce Index = ", round(BI_cnn$cor, 3), "; AUC = ", round(score_cnn_test[grepl("auc", names(score_cnn_test))], 3)))
   dev.off()
   
   
@@ -1591,14 +1554,17 @@ for (t in taxons){
   #files <- list.files("/scratch/rotllxa", full.names = TRUE)
   #files <- files[grepl("py", files)]
   #unlink(files, recursive = TRUE); rm(files)
-  #
-  #
+  
+ 
   #detach(package:reticulate,unload=TRUE)
   #detach(package:keras,unload=TRUE)
   
   #
   
 }
+
+
+
 
 
 
@@ -1615,49 +1581,25 @@ mean(info_models_maxent$cbi.train)
 
 
 
-info_models_all <- c()
+
+
+
+
 
 for (t in taxons){
   
-  if(dir.exists(paste0(dir2save, "models_maxent_", t))){
-    dir2save
+  
+  
+  #
+
+
     
-    info_modelling_maxent <- fread(paste0(dir2save, "models_maxent_", t, "/info_modelling_maxent_all_VirtualSpecies.csv"), header = TRUE)
-    names(info_modelling_maxent)
-    info_maxent <- info_modelling_maxent[, c("auc.val", "cbi.val")]
-    info_maxent$algorithm <- "maxent"
-    info_maxent$species <- t
-    
-    info_models_MLP <- fread(paste0(dir2save, "models_MLP_", t, "/info_models_MLP_all_VirtualSpecies.csv"), header = TRUE)
-    names(info_models_MLP)
-    info_mlp <- info_models_MLP[, c("auc.val", "cbi.val")]
-    info_mlp$algorithm <- "MLP"
-    info_mlp$species <- t
-    
-    info_models_CNN <- fread(paste0(dir2save, "models_CNN_", t, "/info_models_CNN_all_VirtualSpecies.csv"), header = TRUE)
-    names(info_models_CNN)
-    info_cnn <- info_models_CNN[, c("auc.val", "as.vector.unlist.BI_cnn.grepl..cor...names.BI_cnn.....")]
-    names(info_cnn)[2] <- "cbi.val"
-    info_cnn$algorithm <- "CNN"
-    info_cnn$species <- t
-    
-    info_models_all <- rbind(info_models_all, info_maxent, info_mlp, info_cnn)
-    #
-    
-  }
+
+  
+  
+  
+   
 }
 
-info_models_all
-length(unique(info_models_all$species))
 
-statistics <- info_models_all %>%
-  group_by(algorithm) %>%
-  summarise(mean_cbi = mean(cbi.val), mean_auc = mean(auc.val)) %>%
-  as.data.frame()
 
-statistics <- statistics[c(2, 3, 1), ]
-statistics$mean_cbi <- round(statistics$mean_cbi, 3)
-statistics$mean_auc <- round(statistics$mean_auc, 3)
-
-statistics <- statistics[, c(1, 3, 2)]
-statistics
