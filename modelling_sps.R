@@ -184,10 +184,11 @@ head(occs_all)
 sort(table(occs_all$species))
 tbl <- table(occs_all$species)
 ordr <- names(sort(tbl))
+#ordr <- names(sort(tbl, decreasing = TRUE))
 spcies <- data.frame(taxons = unique(occs_all$sp2), sps = unique(occs_all$species))
 spcies <- spcies[match(ordr, spcies$sps),]
 spcies
-#spcies <- spcies[-c(1:6), ]
+#spcies <- spcies[-c(1:7), ]
 taxons <- spcies$taxons
 taxons
 
@@ -282,6 +283,9 @@ for (t in taxons){
   dir_func <- function(sps_data_presences, worldclim_all, sps_data_absences, fc){ # to avoid stop modelling if low number of background points or other errors
     res <- tryCatch(
       {
+        library(dismo)
+        library(ENMeval)
+        
         #modl1 <- ENMevaluate(occs = sps_data_presences[1:3000, .SD, .SDcols = names(worldclim_all)], 
         modl1 <- ENMevaluate(occs = sps_data_presences_train[, .SD, .SDcols = names(worldclim_all)], 
                              envs = NULL, 
@@ -487,7 +491,7 @@ for (t in taxons){
   # 
   library(reticulate)
   use_condaenv('conda_R_env')
-  library(tensorflow)
+  #library(tensorflow)
   library("keras")
   
   #print(t)
@@ -741,8 +745,8 @@ for (t in taxons){
                                   PEplot = TRUE)
   
   
-  BI_mlp$cor  # 0.962 (DL)
-  
+  #BI_mlp$cor  # 0.962 (DL)
+  as.vector(unlist(BI_mlp[grepl("cor", names(BI_mlp))]))
   
   thresholds <- dismo::threshold(dismo::evaluate(extract(sps_preds_rstr[["predictions_MLP"]], occs_i_shp), 
                                                  extract(sps_preds_rstr[["predictions_MLP"]], bckgr))) # sensitibity default 0.9
@@ -783,7 +787,8 @@ for (t in taxons){
   data2save <- (data.frame(species = t, occurrences_raw, occurrences_1km, occurrences_train,
                            occurrences_test, background_points, 
                            auc.val = as.vector(score_mlp_test[grepl("auc", names(score_mlp_test))]),
-                           cbi.val = BI_mlp$cor,
+                           cbi.val = as.vector(unlist(BI_mlp[grepl("cor", names(BI_mlp))])),
+                           #cbi.val = BI_mlp$cor,
                            thresholds, threshold_used))
   rownames(data2save) <- t
   
@@ -990,8 +995,8 @@ for (t in taxons){
                                    PEplot = TRUE)
   
   
-  BI_cnn$cor  # 0.89 (CNN)
-  
+  #BI_cnn$cor  # 0.89 (CNN)
+  as.vector(unlist(BI_cnn[grepl("cor", names(BI_cnn))]))
   
   thresholds <- dismo::threshold(dismo::evaluate(extract(sps_preds_rstr[["predictions_CNN"]], occs_i_shp), 
                                                  extract(sps_preds_rstr[["predictions_CNN"]], bckgr))) # sensitibity default 0.9
@@ -1034,7 +1039,8 @@ for (t in taxons){
                            occurrences_test, background_points,
                            auc.train = as.vector(score_cnn_train[grepl("auc", names(score_cnn_train))]),
                            auc.val = as.vector(score_cnn_test[grepl("auc", names(score_cnn_test))]),
-                           cbi.val = BI_cnn$cor,
+                           as.vector(unlist(BI_cnn[grepl("cor", names(BI_cnn))])),
+                           #cbi.val = BI_cnn$cor,
                            thresholds, threshold_used))
   rownames(data2save) <- t
   
@@ -1042,10 +1048,11 @@ for (t in taxons){
   write.csv(info_models_cnn, "info_models_CNN_all_VirtualSpecies.csv", row.names = FALSE)
   write.csv(info_models_cnn, paste0(dir2save_cnn, "info_models_CNN_all_VirtualSpecies.csv"), row.names = FALSE)
   
-  writeRaster(sps_preds_rstr_pres_abs_all, paste0(dir2save_cnn, "sps_preds_rstr_pres_abs_all.tif"))
-  writeRaster(sps_preds_rstr, paste0(dir2save_cnn, "sps_preds_rstr.tif"))
+  writeRaster(sps_preds_rstr_pres_abs_all, paste0(dir2save_cnn, "sps_preds_rstr_pres_abs_all.tif"), overwrite = TRUE)
+  writeRaster(sps_preds_rstr, paste0(dir2save_cnn, "sps_preds_rstr.tif"), overwrite = TRUE)
 
   print(paste0(t, " run in: ", running_time))
+  print(Sys.time())
   
   
   ## Plotting all predictions together ####
@@ -1063,9 +1070,9 @@ for (t in taxons){
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_MaxEnt"]], zlim = c(0, 1), main = "MaxEnt", cex.main = 3.5, cex.sub = 2.5,
        sub = paste0("MaxEnt: Boyce Index = ", round(as.vector(optimal$cbi.val), 3), "; AUC = ", round(as.vector(optimal$auc.val), 3)))
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_MLP"]], zlim = c(0, 1), main = "MultiLayer Perceptrons (MLP))", cex.main = 3.5, cex.sub = 2.5,
-       sub = paste0("MLP: Boyce Index = ", round(BI_mlp$cor, 3), "; AUC = ", round(score_mlp_test[grepl("auc", names(score_mlp_test))], 3)))
+       sub = paste0("MLP: Boyce Index = ", round(as.vector(unlist(BI_mlp[grepl("cor", names(BI_mlp))])), 3), "; AUC = ", round(score_mlp_test[grepl("auc", names(score_mlp_test))], 3)))
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_CNN"]], zlim = c(0, 1), main = "Convolutional Neural Network (CNN)", cex.main = 3.5, cex.sub = 2.5,
-       sub = paste0("CNN: Boyce Index = ", round(BI_cnn$cor, 3), "; AUC = ", round(score_cnn_test[grepl("auc", names(score_cnn_test))], 3)))
+       sub = paste0("CNN: Boyce Index = ", round(as.vector(unlist(BI_cnn[grepl("cor", names(BI_cnn))])), 3), "; AUC = ", round(score_cnn_test[grepl("auc", names(score_cnn_test))], 3)))
   dev.off()
   
   
@@ -1081,9 +1088,9 @@ for (t in taxons){
   files <- files[grepl("py", files)]
   unlink(files, recursive = TRUE); rm(files)
   
- 
-  detach(package:reticulate,unload=TRUE)
-  detach(package:keras,unload=TRUE)
+ #
+  #detach(package:reticulate,unload=TRUE)
+  #detach(package:keras,unload=TRUE)
   
   #
   
@@ -1104,25 +1111,49 @@ mean(info_models_maxent$cbi.train)
 
 
 
-
-
-
-
+info_models_all <- c()
 
 for (t in taxons){
   
-  
-  
-  #
-
-
+  if(dir.exists(paste0(dir2save, "models_maxent_", t))){
+    dir2save
     
-
-  
-  
-  
-   
+    info_modelling_maxent <- fread(paste0(dir2save, "models_maxent_", t, "/info_modelling_maxent_all_VirtualSpecies.csv"), header = TRUE)
+    names(info_modelling_maxent)
+    info_maxent <- info_modelling_maxent[, c("auc.val", "cbi.val")]
+    info_maxent$algorithm <- "maxent"
+    info_maxent$species <- t
+    
+    info_models_MLP <- fread(paste0(dir2save, "models_MLP_", t, "/info_models_MLP_all_VirtualSpecies.csv"), header = TRUE)
+    names(info_models_MLP)
+    info_mlp <- info_models_MLP[, c("auc.val", "cbi.val")]
+    info_mlp$algorithm <- "MLP"
+    info_mlp$species <- t
+    
+    info_models_CNN <- fread(paste0(dir2save, "models_CNN_", t, "/info_models_CNN_all_VirtualSpecies.csv"), header = TRUE)
+    names(info_models_CNN)
+    info_cnn <- info_models_CNN[, c("auc.val", "as.vector.unlist.BI_cnn.grepl..cor...names.BI_cnn.....")]
+    names(info_cnn)[2] <- "cbi.val"
+    info_cnn$algorithm <- "CNN"
+    info_cnn$species <- t
+    
+    info_models_all <- rbind(info_models_all, info_maxent, info_mlp, info_cnn)
+    #
+    
+  }
 }
 
+info_models_all
+length(unique(info_models_all$species))
 
+statistics <- info_models_all %>%
+  group_by(algorithm) %>%
+  summarise(mean_cbi = mean(cbi.val), mean_auc = mean(auc.val)) %>%
+  as.data.frame()
 
+statistics <- statistics[c(2, 3, 1), ]
+statistics$mean_cbi <- round(statistics$mean_cbi, 3)
+statistics$mean_auc <- round(statistics$mean_auc, 3)
+
+statistics <- statistics[, c(1, 3, 2)]
+statistics
