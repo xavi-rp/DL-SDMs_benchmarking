@@ -57,7 +57,7 @@ library(reticulate)
 use_condaenv('conda_R_env')
 library(tensorflow)
 library("keras")
-keras_model_sequential()
+#keras_model_sequential()
 
 
 
@@ -505,10 +505,10 @@ for (t in taxons){
   rownames(data2save) <- t
   
   info_models_maxent <- rbind(info_models_maxent, data2save)
-  #write.csv(info_models_maxent, "info_modelling_all_species.csv", row.names = FALSE)
-  #write.csv(info_models_maxent, "info_modelling_all_species_085.csv", row.names = FALSE)
-  write.csv(info_models_maxent, "info_modelling_maxent_all_VirtualSpecies.csv", row.names = FALSE)
-  write.csv(info_models_maxent, paste0(dir2save_maxent, "info_modelling_maxent_all_VirtualSpecies.csv"), row.names = FALSE)
+  #write.csv(info_models_maxent, "info_models_all_species.csv", row.names = FALSE)
+  #write.csv(info_models_maxent, "info_models_all_species_085.csv", row.names = FALSE)
+  write.csv(info_models_maxent, "info_models_maxent_all_VirtualSpecies.csv", row.names = FALSE)
+  write.csv(info_models_maxent, paste0(dir2save_maxent, "info_models_maxent_all_VirtualSpecies.csv"), row.names = FALSE)
 
   print(paste0(t, " run in: ", running_time))
   
@@ -950,7 +950,7 @@ for (t in taxons){
   model_c %>% 
     compile(
       loss = 'binary_crossentropy',
-      optimizer = optimizer_sgd(lr = 1e-5, momentum = 0.9),
+      optimizer = optimizer_sgd(learning_rate = 1e-5, momentum = 0.9),
       metrics = c(tensorflow::tf$keras$metrics$AUC(), metric_binary_accuracy)
     )
   
@@ -1419,6 +1419,11 @@ for (t in taxons){
                    epochs = 200, 
                    verbose = 2)
   
+  save_model_hdf5(model_ct, 
+                  filepath = paste0(dir2save_cnnt, "model_CNN_T.h5"), 
+                  overwrite = TRUE, 
+                  include_optimizer = TRUE)
+  
   
   score_cnnt_train <- model_ct %>% evaluate(sps_train_array_all_x, sps_train_array_all_y, batch_size = 128)
   score_cnnt_train
@@ -1555,7 +1560,7 @@ for (t in taxons){
   #sps_preds_rstr <- brick(sps_preds_rstr)
   sps_preds_rstr <- setValues(sps_preds_rstr, 
                               values = worldclim_all_data0$predictions_cnnt,
-                              layer = 3)
+                              layer = 4)
   
   #names(sps_preds_rstr) <- c("predictions_CNN_T")
   names(sps_preds_rstr) <- c("predictions_maxent", "predictions_MLP", "predictions_CNN", "predictions_CNN_T")
@@ -1615,8 +1620,8 @@ for (t in taxons){
   ## saving results
   running_time <- as.vector(Sys.time() - t0)
   if(exists("data2save")) rm(data2save)
-  data2save <- (data.frame(species = t, occurrences_raw, occurrences_1km = 0, occurrences_train=0,
-                           occurrences_test=0, background_points=0,
+  data2save <- (data.frame(species = t, occurrences_raw, occurrences_1km, occurrences_train,
+                           occurrences_test, background_points,
                            auc.train = as.vector(score_cnnt_train[grepl("auc", names(score_cnnt_train))]),
                            auc.val = as.vector(score_cnnt_test[grepl("auc", names(score_cnnt_test))]),
                            #cbi.val = BI_cnnt$cor,
@@ -1685,8 +1690,8 @@ for (t in taxons){
 
 ## Checking results (MaxEnt) ####
 
-#info_models_maxent <- read.csv("info_modelling_all_species.csv", header = TRUE)
-info_models_maxent <- read.csv("info_modelling_all_VirtualSpecies.csv", header = TRUE)
+#info_models_maxent <- read.csv("info_models_all_species.csv", header = TRUE)
+info_models_maxent <- read.csv("info_models_all_VirtualSpecies.csv", header = TRUE)
 View(info_models_maxent)
 
 mean(info_models_maxent$auc.val.avg)
@@ -1703,9 +1708,9 @@ for (t in taxons){
   if(dir.exists(paste0(dir2save, "models_maxent_", t))){
     dir2save
     
-    info_modelling_maxent <- fread(paste0(dir2save, "models_maxent_", t, "/info_modelling_maxent_all_VirtualSpecies.csv"), header = TRUE)
-    names(info_modelling_maxent)
-    info_maxent <- info_modelling_maxent[, c("auc.val", "cbi.val")]
+    info_models_maxent <- fread(paste0(dir2save, "models_maxent_", t, "/info_models_maxent_all_VirtualSpecies.csv"), header = TRUE)
+    names(info_models_maxent)
+    info_maxent <- info_models_maxent[, c("auc.val", "cbi.val")]
     info_maxent$algorithm <- "maxent"
     info_maxent$species <- t
     
