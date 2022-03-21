@@ -1138,7 +1138,7 @@ for (t in taxons){
   sps_pres_tensor <- worldclim_all[sps_pres_neighb$to]
   sps_pres_tensor <- cbind(sps_pres_neighb, sps_pres_tensor)
   head(sps_pres_tensor, 20)
-  View(sps_pres_tensor)
+  #View(sps_pres_tensor)
   nrow(sps_pres_tensor)
   
   
@@ -1146,10 +1146,10 @@ for (t in taxons){
   length(unique(sps_pres_tensor$from))
   
   sps_pres_tensor_grouped <- sps_pres_tensor %>% group_by(from) %>% group_split()
-  sps_pres_tensor_grouped
+  #sps_pres_tensor_grouped
   length(sps_pres_tensor_grouped)
   
-  sps_pres_tensor_grouped[[700]]
+  #sps_pres_tensor_grouped[[700]]
   sps_pres_tensor_grouped[[1]]
   
   
@@ -1171,7 +1171,7 @@ for (t in taxons){
   sps_pres_tensor_array <- aperm(sps_pres_tensor_array, c(4, 1, 2, 3))
   dim(sps_pres_tensor_array)
   sps_pres_tensor_array[1, , ,1]
-  sps_pres_tensor_array[734, , ,1]
+  #sps_pres_tensor_array[734, , ,1]
   sps_pres_tensor_array2[,,1]
   
   
@@ -1213,7 +1213,7 @@ for (t in taxons){
   #sps_abs_tensor_grouped
   length(sps_abs_tensor_grouped)
   
-  sps_abs_tensor_grouped[[700]]
+  #sps_abs_tensor_grouped[[700]]
   sps_abs_tensor_grouped[[1]]
   
   
@@ -1420,15 +1420,15 @@ for (t in taxons){
                    verbose = 2)
   
   
-  score_train <- model_ct %>% evaluate(sps_train_array_all_x, sps_train_array_all_y, batch_size = 128)
-  score_train
+  score_cnnt_train <- model_ct %>% evaluate(sps_train_array_all_x, sps_train_array_all_y, batch_size = 128)
+  score_cnnt_train
   #          loss           auc   binary_accuracy 
   #    0.00704888      0.99965131      0.99851102
   
   sps_test_array_all_x[is.na(sps_test_array_all_x)] <- 0 
   sum(is.na(sps_test_array_all_x))
-  score <- model_ct %>% evaluate(sps_test_array_all_x, sps_test_array_all_y, batch_size = 128)
-  score #for test data
+  score_cnnt_test <- model_ct %>% evaluate(sps_test_array_all_x, sps_test_array_all_y, batch_size = 128)
+  score_cnnt_test #for test data
   #         loss             auc binary_accuracy 
   #   0.006295961     0.984028041     0.998903394 
   
@@ -1517,8 +1517,8 @@ for (t in taxons){
     worldclim_all_tensor_array <- aperm(worldclim_all_tensor_array, c(4, 1, 2, 3))
     dim(worldclim_all_tensor_array)
     worldclim_all_tensor_array[1, , ,1]
-    worldclim_all_tensor_array[720399, , ,1]
-    worldclim_all_tensor_array[734, , ,1]
+    #worldclim_all_tensor_array[720399, , ,1]
+    #worldclim_all_tensor_array[734, , ,1]
     worldclim_all_tensor_array2[,,1]
     saveRDS(worldclim_all_tensor_array, file = paste0(preds_dir, "worldclim_all_tensor_array_ibp.rds"))
     
@@ -1531,32 +1531,110 @@ for (t in taxons){
   dim(worldclim_all_tensor_array)
   
   
-  predictions <- model_ct %>% predict(worldclim_all_tensor_array, batch_size = 128)
-  head(predictions)
-  nrow(predictions)
-  sum(predictions[, 1])
+  predictions_cnnt <- model_ct %>% predict(worldclim_all_tensor_array, batch_size = 128)
+  head(predictions_cnnt)
+  nrow(predictions_cnnt)
+  sum(predictions_cnnt[, 1])
   
-  length(unique(predictions[, 1]))
-  range(predictions[, 1])
-  max(predictions[, 1])
-  summary(predictions[, 1])
+  length(unique(predictions_cnnt[, 1]))
+  range(predictions_cnnt[, 1], na.rm = TRUE)
+  max(predictions_cnnt[, 1])
+  summary(predictions_cnnt[, 1])
   
-  
-  
-  
-  
+  sum(!is.na(predictions_cnnt[, 1]))
+  sum(is.na(predictions_cnnt[, 1])) + sum(!is.na(predictions_cnnt[, 1])) == nrow(predictions_cnnt)
   
   
+  ## Mapping predictions
+  worldclim_all_data1[, predictions_cnnt := as.vector(predictions_cnnt[, 1])]
+  
+  worldclim_all_data0 <- merge(worldclim_all_data0[, "raster_position", with = FALSE], 
+                               worldclim_all_data1[, .SD, .SDcols = c("raster_position", "predictions_cnnt")], 
+                               by = "raster_position", all.x = TRUE)
+  
+  #sps_preds_rstr <- brick(sps_preds_rstr)
+  sps_preds_rstr <- setValues(sps_preds_rstr, 
+                              values = worldclim_all_data0$predictions_cnnt,
+                              layer = 3)
+  
+  #names(sps_preds_rstr) <- c("predictions_CNN_T")
+  names(sps_preds_rstr) <- c("predictions_maxent", "predictions_MLP", "predictions_CNN", "predictions_CNN_T")
+  sps_preds_rstr
+  
+  
+  ## Boyce Index
+  sps_data_presences_test_coords
+  
+  BI_cnnt <- ecospat::ecospat.boyce(fit = sps_preds_rstr[["predictions_CNN_T"]],
+                                   obs = sps_data_presences_test_coords, 
+                                   nclass = 0, 
+                                   window.w = "default", 
+                                   res = 100, 
+                                   PEplot = TRUE)
+  
+  
+  as.vector(unlist(BI_cnnt[grepl("cor", names(BI_cnnt))]))
+  #BI_cnnt$cor  # 0.89 (CNN)
+  
+  thresholds <- dismo::threshold(dismo::evaluate(extract(sps_preds_rstr[["predictions_CNN_T"]], occs_i_shp), 
+                                                 extract(sps_preds_rstr[["predictions_CNN_T"]], bckgr))) # sensitibity default 0.9
+  thresholds
+  #threshold2 <- as.numeric(thresholds$sensitivity)
+  #threshold2 <- as.numeric(thresholds$no_omission) # keeping all presences
+  threshold2 <- as.numeric(thresholds[names(thresholds) %in% threshold2use])
+  threshold_used <- threshold2
+  
+  a <- c(0, threshold2, 0)
+  b <- c(threshold2, 1, 1)
+  thr <- rbind(a, b)
+  
+  sps_preds_rstr_pres_abs <- reclassify(sps_preds_rstr[["predictions_CNN_T"]], rcl = thr, filename = '', include.lowest = FALSE, right = TRUE)
+  sps_preds_rstr_pres_abs_all <- stack(sps_preds_rstr_pres_abs_all, sps_preds_rstr_pres_abs)
+  #names(sps_preds_rstr_pres_abs_all)[2] <- c("Pres_Abs_CNN_T")
+  names(sps_preds_rstr_pres_abs_all) <- c("Pres_Abs_MaxEnt", "Pres_Abs_MLP", "Pres_Abs_CNN", "Pres_Abs_CNN_T")
+  
+  
+  ## Plotting predictions
+  pdf(paste0(dir2save_cnnt, "sps_predictions_CNNtensors_", t, ".pdf"), width = 18, height = 15)
+  par(mar = c(6, 8, 6, 8), oma = c(4,0,8,0))
+  par(mfrow = c(2, 2))
+  plot(sps_preds_rstr[["predictions_CNN_T"]], zlim = c(0, 1), main = "Occurrences (1km)", cex.main = 2, cex.sub = 1.5, legend = FALSE)
+  plot(occs_i_shp, add = TRUE, col = "black")
+  plot(sps_preds_rstr[["predictions_CNN_T"]], zlim = c(0, 1), main = "CNN-tensors predictions", cex.main = 2, cex.sub = 1.5)
+  plot(sps_preds_rstr_pres_abs, main = "Presence-Absence", #col = c("green", "grey"), 
+       sub = paste0("Threshold: '", threshold2use, "'"), 
+       cex.main = 2, cex.sub = 1.5, legend = FALSE)
+  title(list(paste0(sps),
+             cex = 4), 
+        line = 1, outer = TRUE)
+  
+  dev.off()
+  
+  
+  
+  ## saving results
+  running_time <- as.vector(Sys.time() - t0)
+  if(exists("data2save")) rm(data2save)
+  data2save <- (data.frame(species = t, occurrences_raw, occurrences_1km = 0, occurrences_train=0,
+                           occurrences_test=0, background_points=0,
+                           auc.train = as.vector(score_cnnt_train[grepl("auc", names(score_cnnt_train))]),
+                           auc.val = as.vector(score_cnnt_test[grepl("auc", names(score_cnnt_test))]),
+                           #cbi.val = BI_cnnt$cor,
+                           cbi.val = as.vector(unlist(BI_cnnt[grepl("cor", names(BI_cnnt))])),
+                           thresholds, threshold_used))
+  rownames(data2save) <- t
+  
+  info_models_cnnt <- rbind(info_models_cnnt, data2save)
+  write.csv(info_models_cnnt, "info_models_CNNtensors_all_VirtualSpecies.csv", row.names = FALSE)
+  write.csv(info_models_cnnt, paste0(dir2save_cnnt, "info_models_CNNtensors_all_VirtualSpecies.csv"), row.names = FALSE)
+  
+  writeRaster(sps_preds_rstr_pres_abs_all, paste0(dir2save_cnnt, "sps_preds_rstr_pres_abs_all.tif"), overwrite = TRUE)
+  writeRaster(sps_preds_rstr, paste0(dir2save_cnnt, "sps_preds_rstr.tif"), overwrite = TRUE)
+  
+  print(paste0(t, " run in: ", running_time))
+  print(Sys.time())
   
   #
-  
-  
-  
-  
-  
-  
-  
-  
   
   
   ## Plotting all predictions together ####
@@ -1565,8 +1643,8 @@ for (t in taxons){
   #names(sps_preds_rstr_pres_abs_all) <- c("Pres_Abs_MaxEnt", "Pres_Abs_MLP", "Pres_Abs_CNN")
   
   
-  pdf(paste0(dir2save_cnn, "Pres-Abs_MaxEnt_MLP_CNN_", t, ".pdf"), width = 20, height = 20)
-  par(mfrow = c(2, 2))
+  pdf(paste0(dir2save_cnnt, "Pres-Abs_MaxEnt_MLP_CNN_CNNt_", t, ".pdf"), width = 30, height = 20)
+  par(mfrow = c(2, 3))
   par(mar = c(8, 4, 4, 5))
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_MaxEnt"]], col = "grey", 
        main = paste0("Simulated species: ", t), cex.main = 3.5, legend = FALSE)
@@ -1577,12 +1655,15 @@ for (t in taxons){
        sub = paste0("MLP: Boyce Index = ", round(as.vector(unlist(BI_mlp[grepl("cor", names(BI_mlp))])), 3), "; AUC = ", round(score_mlp_test[grepl("auc", names(score_mlp_test))], 3)))
   plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_CNN"]], zlim = c(0, 1), main = "Convolutional Neural Network (CNN)", cex.main = 3.5, cex.sub = 2.5,
        sub = paste0("CNN: Boyce Index = ", round(as.vector(unlist(BI_cnn[grepl("cor", names(BI_cnn))])), 3), "; AUC = ", round(score_cnn_test[grepl("auc", names(score_cnn_test))], 3)))
+  plot(sps_preds_rstr_pres_abs_all[["Pres_Abs_CNN_T"]], zlim = c(0, 1), main = "Convolutional Neural Network with tensors (CNN-T)", cex.main = 3.5, cex.sub = 2.5,
+       sub = paste0("CNN-T: Boyce Index = ", round(as.vector(unlist(BI_cnnt[grepl("cor", names(BI_cnnt))])), 3), "; AUC = ", round(score_cnnt_test[grepl("auc", names(score_cnnt_test))], 3)))
   dev.off()
   
   
   
   if(exists("model")) rm(model)
   if(exists("model_c")) rm(model_c)
+  if(exists("model_ct")) rm(model_ct)
   
   
   #files <- list.files(tempdir(), full.names = TRUE)
